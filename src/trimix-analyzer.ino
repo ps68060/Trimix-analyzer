@@ -11,6 +11,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);  // set the LCD address to 0x3F for a 20 cha
 Adafruit_ADS1115 ads;        // convertisseur analogique --> digital ADS1115
 
 // variables will change:
+char  version[] = "22.10.13";
 float TensionCalib = 0;      // mise a 0 de la tension de calibrage de la cellule / setting to 0 of the cell calibration voltage
 float voltage = 0;           // tension mesuree sur cellule / voltage measured on cell
 float wheatstone = 0;        // tension sur pont de wheatsone / wheatsone bridge voltage
@@ -36,13 +37,16 @@ void setup()
   lcd.init();
   lcd.backlight();
   lcd.print("  Trimix Analyser");
-  
+  lcd.setCursor(6,1);
+  lcd.print(version);
+  delay(1000);
+
   ads.setGain(GAIN_FOUR); // 4x gain 1 bit = 0.03125mV
   ads.begin();
-  
-  int16_t adc0;
-  int16_t adc1; 
- 
+
+  int16_t adc0;  // Oxygen sensor
+  int16_t adc1;  // "Helium" sensor 
+
   adc0 = ads.readADC_Differential_0_1();
   RA0.addValue(adc0);
   voltage = abs(RA0.getAverage()*gain);
@@ -53,21 +57,21 @@ void setup()
  
   // voltage display 
   lcd.setCursor(0,2);
-  lcd.print("V cell = ");
+  lcd.print("V O2 = ");
   lcd.print(voltage,2);
   lcd.print("mV");
   lcd.setCursor(0,3);
-  lcd.print("V bridge = ");
+  lcd.print("V He = ");
   lcd.print(wheatstone,2);
   lcd.print("mV");
-  delay(2000);
+  delay(3000);
 
   // Begin calibration
   lcd.clear();
   lcd.setCursor(0,1);
-  lcd.print(" Calib. in progress");
+  lcd.print(" Calibrating...");
   lcd.setCursor(0,2);
-  lcd.print("(using air)");
+  lcd.print(" (using air)");
   
   // determination de la tension moyenne de la cellule à l'air libre /
   // determination of the average voltage of the cell in the open air 
@@ -78,18 +82,18 @@ void setup()
   {
     adc0 = ads.readADC_Differential_0_1();
     RA0.addValue(adc0);
-    voltage = abs(RA0.getAverage()*gain); 
+    voltage = abs(RA0.getAverage()*gain);
     tensionMoyenne = tensionMoyenne + voltage;
     delay(200);
   }
 
   lcd.clear();
   lcd.setCursor(0,1);
-  lcd.print("  Calibration OK");
+  lcd.print(" Calibration OK");
   tensionMoyenne = tensionMoyenne / (i - 1);
   TensionCalib = tensionMoyenne;
   lcd.setCursor(0,2);
-  lcd.print("V calib = ");
+  lcd.print(" V calib = ");
   lcd.print(TensionCalib,2);
   lcd.print("mV");
   // End calibration
@@ -98,7 +102,7 @@ void setup()
 
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Preheating of the");
+  lcd.print("Preheating the");
   lcd.setCursor(0,1);
   lcd.print("  Helium sensor...");
   delay(500);
@@ -145,10 +149,10 @@ void loop()
   int MOD = 0;                  // valeur de MOD du mélange / MOD value of the mixture
   int EAD = 0;                  // prof equivalente Air pour narcose 30m / prof equivalent Air for narcosis 30m
   float helium = 0;
-  
+
   nitrox = voltage * (20.9 / TensionCalib);
   MOD = 10 * ( (160/nitrox) - 1);
-    
+
   lcd.setCursor(0,0);
   if (voltage > 1)
   {
@@ -170,10 +174,10 @@ void loop()
     lcd.print("!  Cell O2 Error   !");
   }
 
-  lcd.setCursor(0,3);    
-  lcd.print("Vbridge=");
-  lcd.print(wheatstone,0);
-  lcd.print("mV  "); 
+//  lcd.setCursor(0,3);
+//  lcd.print("Vbridge=");
+//  lcd.print(wheatstone,0);
+//  lcd.print("mV  ");
 
   wheatstone = wheatstone - WheatCalib;  
     
@@ -197,7 +201,7 @@ void loop()
   if (time < 30000)  {  CorrFroid = 18 ; }
   
   wheatstone = wheatstone - CorrFroid;            // ajustement car capteur pas assez chaud / adjustment because sensor not hot enough
-   
+
   lcd.setCursor(0,1);    
   lcd.print("Helium = ");
   helium = 100 * wheatstone / calibMD62;
@@ -243,5 +247,8 @@ void loop()
     lcd.print("    ");
     lcd.setCursor(12,3);
     lcd.print("       ");
-  }  
+  }
+
+  // Add a delay
+  delay (50);
 }
